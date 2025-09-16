@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotional Pulse - Where Compliance Meets Culture</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Manrope', sans-serif;
+            background: #F5F3EE;
+            color: rgba(0, 0, 0, 0.749);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            animation: fadeIn 1s ease-out;
+        }
+        
+        h1 {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -2px;
+        }
+        
+        .subheadline {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            font-weight: 600;
+            margin-bottom: 2.5rem;
+            opacity: 0.9;
+        }
+        
+        .cta-button {
+            background: #91A27D;
+            color: white;
+            padding: 20px 40px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-block;
+            text-decoration: none;
+            transform: translateY(0);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px rgba(145, 162, 125, 0.3);
+            background: #7a8a68;
+        }
+        
+        /* Section Styles */
+        section {
+            padding: 100px 0;
+            opacity: 0;
+            animation: slideUp 0.8s ease-out forwards;
+            animation-delay: 0.2s;
+        }
+        
+        h2 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 800;
+            margin-bottom: 2rem;
+            letter-spacing: -1px;
+        }
+        
+        h3 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #91A27D;
+        }
+        
+        .problem-grid {
+            display: grid;
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+        
+        .problem-item {
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+        }
+        
+        .problem-item:hover {
+            transform: translateX(10px);
+        }
+        
+        .solution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+        
+        .feature-card {
+            padding: 2.5rem;
+            background: white;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .feature-card:hover {
+            border-color: #91A27D;
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .ai-spotlight {
+            background: linear-gradient(135deg, #91A27D 0%, #7a8a68 100%);
+            color: white;
+            padding: 100px 0;
+            margin: 100px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ai-spotlight::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        
+        .ai-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .ai-spotlight h2 {
+            color: white;
+        }
+        
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+        
+        .step {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 20px;
+            position: relative;
+        }
+        
+        .step-number {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            background: #91A27D;
+            color: white;
+            border-radius: 50%;
+            line-height: 50px;
+            font-weight: 800;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .outcomes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+        
+        .outcome-card {
+            padding: 2rem;
+            background: rgba(145, 162, 125, 0.1);
+            border-radius: 20px;
+            border-left: 5px solid #91A27D;
+            transition: all 0.3s ease;
+        }
+        
+        .outcome-card:hover {
+            background: rgba(145, 162, 125, 0.2);
+            transform: translateX(10px);
+        }
+        
+        .cta-section {
+            text-align: center;
+            padding: 150px 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(145, 162, 125, 0.05) 100%);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 50px 0;
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1) rotate(0deg);
+            }
+            50% {
+                transform: scale(1.1) rotate(180deg);
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            section {
+                padding: 60px 0;
+            }
+            
+            .ai-spotlight {
+                padding: 60px 0;
+                margin: 60px 0;
+            }
+            
+            .cta-section {
+                padding: 80px 0;
+            }
+        }
+        
+        /* Smooth scroll */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Bold accent text */
+        .accent {
+            color: #91A27D;
+            font-weight: 800;
+        }
+        
+        .divider {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #91A27D, transparent);
+            margin: 80px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Your EAP is a Band-Aid<br>on a Bullet Wound.</h1>
+            <p class="subheadline">
+                New workplace mental health legislation is here.<br>
+                <span class="accent">Emotional Pulse</span> makes compliance automatic—and actually gives a damn.
+            </p>
+            <a href="#ai-mhfr" class="cta-button">Meet Your AI First Responder</a>
+        </div>
+    </section>
+
+    <!-- Problem Section -->
+    <section class="problem">
+        <div class="container">
+            <h2>The Clock is Ticking</h2>
+            <div class="problem-grid">
+                <div class="problem-item">
+                    <h3>⚠️ Compliance Nightmare</h3>
+                    <p>Mental health legislation isn't asking anymore—it's demanding. Your dusty EAP pamphlet won't cut it when the auditors come knocking.</p>
+                </div>
+                <div class="problem-item">
+                    <h3>💸 Fines That Hurt</h3>
+                    <p>Non-compliance isn't just bad PR. It's real money. Real lawsuits. Real damage to everything you've built.</p>
+                </div>
+                <div class="problem-item">
+                    <h3>🔥 Culture on Fire</h3>
+                    <p>Your people are burning out in silence. They won't use that 1-800 number. They need something that actually works.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container"><div class="divider"></div></div>
+
+    <!-- Solution Section -->
+    <section class="solution">
+        <div class="container">
+            <h2>Emotional Pulse:<br>Infrastructure for Human Care</h2>
+            <p style="font-size: 1.3rem; margin-bottom: 3rem;">Not another wellness app. This is <span class="accent">compliance + culture</span> in one platform.</p>
+            
+            <div class="solution-grid">
+                <div class="feature-card">
+                    <h3>📊 Check-Ins</h3>
+                    <p>Real-time emotional tracking that builds self-awareness. No fluff. Just honest reflection that creates data you can act on.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🤝 Pairs & Groups</h3>
+                    <p>Connect humans to humans. Build support networks that actually work. Culture isn't a poster—it's people giving a damn about each other.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🚨 Instant Support</h3>
+                    <p>AI MHFR or trained human responders. Anonymous. Immediate. No judgment. No waiting rooms. Just help when it's needed.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI MHFR Spotlight -->
+    <section class="ai-spotlight" id="ai-mhfr">
+        <div class="container ai-content">
+            <h2>The AI Mental Health First Responder</h2>
+            <p style="font-size: 1.3rem; margin-bottom: 2rem;">Your 24/7 anonymous voice of support. Trained. Trusted. Always there.</p>
+            
+            <div style="background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 20px; margin-top: 3rem;">
+                <p style="font-size: 1.2rem; line-height: 1.8;">
+                    <strong>Anonymous.</strong> No names. No judgment. Just support.<br>
+                    <strong>Voice-based.</strong> Talk like a human, get heard like a human.<br>
+                    <strong>Instant.</strong> 3am crisis? Lunch break breakdown? It's there.<br>
+                    <strong>Scalable.</strong> One or ten thousand employees—same instant response.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works">
+        <div class="container">
+            <h2>Dead Simple. Deadly Effective.</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Check-In</h3>
+                    <p>Employees track emotions in seconds. Build awareness. Spot patterns.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Connect</h3>
+                    <p>AI maps trends. Humans connect. Support networks form naturally.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Support</h3>
+                    <p>Need help? AI MHFR responds instantly. Or choose a human. Your call.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>Thrive</h3>
+                    <p>Real-time culture pulse. Compliance covered. Humans supported.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container"><div class="divider"></div></div>
+
+    <!-- Outcomes -->
+    <section class="outcomes-section">
+        <div class="container">
+            <h2>What Changes When You Give a Damn</h2>
+            <div class="outcomes">
+                <div class="outcome-card">
+                    <h3>✅ Compliance on Autopilot</h3>
+                    <p>Legislation requirements? Met. Documentation? Done. Auditors? Bring them on.</p>
+                </div>
+                <div class="outcome-card">
+                    <h3>💰 HR Costs Plummet</h3>
+                    <p>Less crisis management. Less turnover. Less time fighting fires. More time building culture.</p>
+                </div>
+                <div class="outcome-card">
+                    <h3>🎯 Culture That Slaps</h3>
+                    <p>Employees who feel seen stay. They perform. They care. Because you showed you care first.</p>
+                </div>
+                <div class="outcome-card">
+                    <h3>📈 Risk Evaporates</h3>
+                    <p>Legal exposure drops. Reputation improves. You become the company people want to work for.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <h2>Stop Playing Defense.<br>Start Giving a Damn.</h2>
+            <p style="font-size: 1.3rem; margin: 2rem 0;">Emotional Pulse isn't just compliance—it's competitive advantage.</p>
+            <a href="#" class="cta-button">Meet Emotional Pulse AI Today</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>All Rights Reserved. Sharetree. 2025<br>
+            <small style="opacity: 0.7;">A charity that believes mental health isn't a luxury—it's infrastructure.</small></p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth reveal animations on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all sections
+        document.querySelectorAll('section').forEach(section => {
+            if (!section.classList.contains('hero')) {
+                section.style.opacity = '0';
+                section.style.transform = 'translateY(30px)';
+                section.style.transition = 'all 0.8s ease-out';
+                observer.observe(section);
+            }
+        });
+
+        // Smooth scroll for CTA buttons
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add parallax effect to hero
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const hero = document.querySelector('.hero');
+            hero.style.transform = `translateY(${scrolled * 0.5}px)`;
+            hero.style.opacity = 1 - (scrolled * 0.001);
+        });
+    </script>
+</body>
+</html>
