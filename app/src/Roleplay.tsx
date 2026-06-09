@@ -296,6 +296,7 @@ export default function Roleplay({ agentId, title = 'Roleplay Practice', subtitl
   const assessmentPromptPendingRef = useRef(false)
   const awaitingFeedbackRef = useRef(false)
   const feedbackMsgIdRef = useRef<string | null>(null)
+  const currentAgentMsgIdRef = useRef<string | null>(null)
 
   const scrollToBottom = () => {
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 60)
@@ -359,20 +360,20 @@ export default function Roleplay({ agentId, title = 'Roleplay Practice', subtitl
               setGreetingReceived(true)
               appendMessage('agent', message, 'agent-greeting')
             } else {
-              const isAssessmentFeedback =
-                awaitingFeedbackRef.current || looksLikeAssessmentFeedback(message)
+              const looksLikeFeedback = looksLikeAssessmentFeedback(message)
+              const isAssessmentFeedback = awaitingFeedbackRef.current || looksLikeFeedback
               if (awaitingFeedbackRef.current) awaitingFeedbackRef.current = false
-              if (looksLikeAssessmentFeedback(message)) {
-                assessmentPromptPendingRef.current = false
-              }
+              if (looksLikeFeedback) assessmentPromptPendingRef.current = false
 
               let msgId: string
               if (isAssessmentFeedback) {
                 if (!feedbackMsgIdRef.current) feedbackMsgIdRef.current = `agent-feedback-${Date.now()}`
                 msgId = feedbackMsgIdRef.current
+                currentAgentMsgIdRef.current = null
               } else {
                 feedbackMsgIdRef.current = null
-                msgId = `agent-${Date.now()}`
+                if (!currentAgentMsgIdRef.current) currentAgentMsgIdRef.current = `agent-${Date.now()}`
+                msgId = currentAgentMsgIdRef.current
               }
 
               if (isAssessmentPromptMessage(message)) {
@@ -384,9 +385,12 @@ export default function Roleplay({ agentId, title = 'Roleplay Practice', subtitl
               if (isReadyToStartMessage(message)) {
                 setCharacterIntroMsgId((prev) => prev ?? msgId)
               }
-              appendMessage('agent', message, msgId, { isAssessmentFeedback })
+              appendMessage('agent', message, msgId, {
+                isAssessmentFeedback: isAssessmentFeedback || looksLikeFeedback,
+              })
             }
           } else if (role === 'user' && message.trim()) {
+            currentAgentMsgIdRef.current = null
             if (assessmentPromptPendingRef.current) {
               assessmentPromptPendingRef.current = false
               awaitingFeedbackRef.current = true
@@ -452,6 +456,7 @@ export default function Roleplay({ agentId, title = 'Roleplay Practice', subtitl
     assessmentPromptPendingRef.current = false
     awaitingFeedbackRef.current = false
     feedbackMsgIdRef.current = null
+    currentAgentMsgIdRef.current = null
     setAppStatus('idle')
   }
 
@@ -462,6 +467,7 @@ export default function Roleplay({ agentId, title = 'Roleplay Practice', subtitl
       assessmentPromptPendingRef.current = false
       awaitingFeedbackRef.current = true
     }
+    currentAgentMsgIdRef.current = null
     userMessageCountRef.current += 1
     appendMessage('user', text)
     setComposerValue('')
@@ -588,14 +594,15 @@ export default function Roleplay({ agentId, title = 'Roleplay Practice', subtitl
                     characterActive = true
                     return <CharacterCard key={msg.id} text={msg.text} name={activeCharacter} />
                   }
-                  if (msg.isAssessmentFeedback && msg.role === 'agent') {
-                    return <FeedbackCard key={msg.id} text={msg.text} />
-                  }
-                  if (msg.role === 'agent' && looksLikeAssessmentFeedback(msg.text)) {
+                  if (msg.role === 'agent' && (msg.isAssessmentFeedback || looksLikeAssessmentFeedback(msg.text))) {
                     return <FeedbackCard key={msg.id} text={msg.text} />
                   }
                   const applyTheme =
-                    msg.role === 'agent' && characterActive && activeCharacter && !msg.isAssessmentFeedback
+                    msg.role === 'agent' &&
+                    characterActive &&
+                    activeCharacter &&
+                    !msg.isAssessmentFeedback &&
+                    !looksLikeAssessmentFeedback(msg.text)
                   return (
                     <div key={msg.id} className={`message ${msg.role}`}>
                       {msg.role === 'agent' && (
