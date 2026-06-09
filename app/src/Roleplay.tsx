@@ -98,6 +98,8 @@ const FEEDBACK_SECTION_PATTERN =
 const WRITTEN_NUMBER_PATTERN =
   /\b(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|Eleven|Twelve|Thirteen|Fourteen|Fifteen|Sixteen|Seventeen|Eighteen|Nineteen|Twenty)\.\s+/gi
 
+const DIGIT_NUMBER_PATTERN = /(?:^|\s)(\d{1,2})\.\s+/g
+
 const FEEDBACK_OUTRO_PATTERN =
   /that's the end of the session.*?take what's useful\.?/i
 
@@ -114,13 +116,24 @@ function isFeedbackMessage(text: string): boolean {
 }
 
 function isAssessmentPromptMessage(text: string): boolean {
-  return /that'?s the end of the roleplay|end of the roleplay|role[- ]?play assessment|check your (?:role[- ]?play )?assessment/i.test(
+  return /that'?s the end of the roleplay|end of the roleplay|role[- ]?play assessment|check your (?:role[- ]?play )?assessment|ready to check your/i.test(
     text,
   )
 }
 
-function parseWrittenNumberBullets(text: string, minItems = 2): ParsedFeedback | null {
-  const matches = [...text.matchAll(new RegExp(WRITTEN_NUMBER_PATTERN.source, 'gi'))]
+function looksLikeAssessmentFeedback(text: string): boolean {
+  const digitMatches = [...text.matchAll(/(?:^|\s)\d{1,2}\.\s+/g)]
+  if (digitMatches.length >= 3) return true
+  const writtenMatches = [...text.matchAll(new RegExp(WRITTEN_NUMBER_PATTERN.source, 'gi'))]
+  return writtenMatches.length >= 3
+}
+
+function splitNumberedItems(
+  text: string,
+  pattern: RegExp,
+  minItems: number,
+): ParsedFeedback | null {
+  const matches = [...text.matchAll(new RegExp(pattern.source, pattern.flags))]
   if (matches.length < minItems) return null
 
   const intro = text.slice(0, matches[0].index ?? 0).trim()
@@ -145,11 +158,23 @@ function parseWrittenNumberBullets(text: string, minItems = 2): ParsedFeedback |
   return { intro, items: items.filter(Boolean), outro }
 }
 
+function parseWrittenNumberBullets(text: string, minItems = 2): ParsedFeedback | null {
+  return splitNumberedItems(text, WRITTEN_NUMBER_PATTERN, minItems)
+}
+
+function parseDigitNumberBullets(text: string, minItems = 2): ParsedFeedback | null {
+  return splitNumberedItems(text, DIGIT_NUMBER_PATTERN, minItems)
+}
+
 function parseFeedbackBullets(text: string, force = false): ParsedFeedback | null {
   const trimmed = text.trim()
   if (!trimmed) return null
+  const minItems = force ? 1 : 2
 
-  const writtenNumbers = parseWrittenNumberBullets(trimmed, force ? 1 : 2)
+  const digitNumbers = parseDigitNumberBullets(trimmed, minItems)
+  if (digitNumbers) return digitNumbers
+
+  const writtenNumbers = parseWrittenNumberBullets(trimmed, minItems)
   if (writtenNumbers) return writtenNumbers
 
   const sectionMatches = [...trimmed.matchAll(FEEDBACK_SECTION_PATTERN)]
@@ -202,6 +227,8 @@ function parseFeedbackBullets(text: string, force = false): ParsedFeedback | nul
   }
 
   if (force && trimmed) {
+    const parsed = parseDigitNumberBullets(trimmed, 1) ?? parseWrittenNumberBullets(trimmed, 1)
+    if (parsed) return parsed
     return { intro: '', items: [trimmed] }
   }
 
@@ -332,8 +359,12 @@ export default function Roleplay({ agentId, title = 'Roleplay Practice', subtitl
               setGreetingReceived(true)
               appendMessage('agent', message, 'agent-greeting')
             } else {
-              const isAssessmentFeedback = awaitingFeedbackRef.current
-              if (isAssessmentFeedback) awaitingFeedbackRef.current = false
+              const isAssessmentFeedback =
+                awaitingFeedbackRef.current || looksLikeAssessmentFeedback(message)
+              if (awaitingFeedbackRef.current) awaitingFeedbackRef.current = false
+              if (looksLikeAssessmentFeedback(message)) {
+                assessmentPromptPendingRef.current = false
+              }
 
               let msgId: string
               if (isAssessmentFeedback) {
@@ -558,6 +589,9 @@ export default function Roleplay({ agentId, title = 'Roleplay Practice', subtitl
                     return <CharacterCard key={msg.id} text={msg.text} name={activeCharacter} />
                   }
                   if (msg.isAssessmentFeedback && msg.role === 'agent') {
+                    return <FeedbackCard key={msg.id} text={msg.text} />
+                  }
+                  if (msg.role === 'agent' && looksLikeAssessmentFeedback(msg.text)) {
                     return <FeedbackCard key={msg.id} text={msg.text} />
                   }
                   const applyTheme =
