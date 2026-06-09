@@ -6,6 +6,7 @@ type Message = {
   id: string
   role: 'agent' | 'user'
   text: string
+  isAssessmentFeedback?: boolean
 }
 
 type AppStatus = 'idle' | 'connecting' | 'connected' | 'error'
@@ -91,6 +92,154 @@ function boldCharacterNames(text: string): React.ReactNode {
   )
 }
 
+const FEEDBACK_SECTION_PATTERN =
+  /(?:^|\n)\s*(what landed well|what to sharpen|one thing to try(?: next time)?)\s*[:\-–—]\s*/gi
+
+const WRITTEN_NUMBER_PATTERN =
+  /\b(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|Eleven|Twelve|Thirteen|Fourteen|Fifteen|Sixteen|Seventeen|Eighteen|Nineteen|Twenty)\.\s+/gi
+
+const FEEDBACK_OUTRO_PATTERN =
+  /that's the end of the session.*?take what's useful\.?/i
+
+type ParsedFeedback = {
+  intro: string
+  items: string[]
+  outro?: string
+}
+
+function isFeedbackMessage(text: string): boolean {
+  return /what landed well|what to sharpen|try next time|how it went|here'?s (?:my )?feedback|walk you through|great work today|nice work today|well done today|that's the end of the session/i.test(
+    text,
+  )
+}
+
+function isAssessmentPromptMessage(text: string): boolean {
+  return /that'?s the end of the roleplay|end of the roleplay|role[- ]?play assessment|check your (?:role[- ]?play )?assessment/i.test(
+    text,
+  )
+}
+
+function parseWrittenNumberBullets(text: string, minItems = 2): ParsedFeedback | null {
+  const matches = [...text.matchAll(new RegExp(WRITTEN_NUMBER_PATTERN.source, 'gi'))]
+  if (matches.length < minItems) return null
+
+  const intro = text.slice(0, matches[0].index ?? 0).trim()
+  const items = matches
+    .map((match, index) => {
+      const start = (match.index ?? 0) + match[0].length
+      const end = matches[index + 1]?.index ?? text.length
+      return text.slice(start, end).trim()
+    })
+    .filter(Boolean)
+
+  if (items.length < minItems) return null
+
+  let outro: string | undefined
+  const lastItem = items[items.length - 1]
+  const outroMatch = lastItem.match(FEEDBACK_OUTRO_PATTERN)
+  if (outroMatch) {
+    outro = outroMatch[0].trim()
+    items[items.length - 1] = lastItem.replace(FEEDBACK_OUTRO_PATTERN, '').trim()
+  }
+
+  return { intro, items: items.filter(Boolean), outro }
+}
+
+function parseFeedbackBullets(text: string, force = false): ParsedFeedback | null {
+  const trimmed = text.trim()
+  if (!trimmed) return null
+
+  const writtenNumbers = parseWrittenNumberBullets(trimmed, force ? 1 : 2)
+  if (writtenNumbers) return writtenNumbers
+
+  const sectionMatches = [...trimmed.matchAll(FEEDBACK_SECTION_PATTERN)]
+  if (sectionMatches.length >= 2) {
+    const items: string[] = []
+    const intro = trimmed.slice(0, sectionMatches[0].index ?? 0).trim()
+
+    sectionMatches.forEach((match, index) => {
+      const label = match[1]
+      const start = (match.index ?? 0) + match[0].length
+      const end = sectionMatches[index + 1]?.index ?? trimmed.length
+      const body = trimmed.slice(start, end).trim()
+      items.push(`${label}: ${body}`)
+    })
+
+    return { intro, items }
+  }
+
+  const lines = trimmed.split(/\n+/).map((line) => line.trim()).filter(Boolean)
+  const items: string[] = []
+  const introLines: string[] = []
+
+  for (const line of lines) {
+    const bulletMatch = line.match(/^(?:[-•*●]|\d+[.)])\s+(.+)$/)
+    if (bulletMatch) {
+      items.push(bulletMatch[1].trim())
+      continue
+    }
+
+    if (items.length === 0) {
+      introLines.push(line)
+      continue
+    }
+
+    items[items.length - 1] += ` ${line}`
+  }
+
+  if (items.length >= 2) {
+    return { intro: introLines.join(' '), items }
+  }
+
+  if (isFeedbackMessage(trimmed)) {
+    const inlineItems = trimmed.match(/(?:^|\s)(?:[-•*●]|\d+[.)])\s+[^•\n]+/g)
+    if (inlineItems && inlineItems.length >= 2) {
+      return {
+        intro: introLines.join(' '),
+        items: inlineItems.map((item) => item.replace(/^\s*(?:[-•*●]|\d+[.)])\s+/, '').trim()),
+      }
+    }
+  }
+
+  if (force && trimmed) {
+    return { intro: '', items: [trimmed] }
+  }
+
+  return null
+}
+
+const FEEDBACK_ITEM_COLORS = ['#91A27D', '#7a8a68', '#d08a6e', '#ca501c', '#9b9d93']
+
+function FeedbackCard({ text }: { text: string }) {
+  const feedback = parseFeedbackBullets(text, true)
+
+  return (
+    <div className="feedback-card-wrap">
+      <div className="feedback-card">
+        <div className="feedback-card-header">
+          <span className="feedback-card-badge">Role-play assessment</span>
+        </div>
+        {feedback?.intro && <p className="feedback-intro">{boldCharacterNames(feedback.intro)}</p>}
+        <ul className="feedback-list">
+          {(feedback?.items ?? [text]).map((item, index) => (
+            <li
+              key={index}
+              className="feedback-list-item"
+              style={
+                { '--item-accent': FEEDBACK_ITEM_COLORS[index % FEEDBACK_ITEM_COLORS.length] } as React.CSSProperties
+              }
+            >
+              <span className="feedback-item-number">{index + 1}</span>
+              <span className="feedback-item-text">{boldCharacterNames(item)}</span>
+            </li>
+          ))}
+        </ul>
+        {feedback?.outro && <p className="feedback-outro">{boldCharacterNames(feedback.outro)}</p>}
+      </div>
+    </div>
+  )
+}
+
 export type RoleplayProps = {
   agentId: string
   title?: string
@@ -117,17 +266,31 @@ export default function Roleplay({ agentId, title = 'Roleplay Practice', subtitl
   const userMessageCountRef = useRef(0)
   const agentMessageCountRef = useRef(0)
   const userEndedRef = useRef(false)
+  const assessmentPromptPendingRef = useRef(false)
+  const awaitingFeedbackRef = useRef(false)
+  const feedbackMsgIdRef = useRef<string | null>(null)
 
   const scrollToBottom = () => {
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 60)
   }
 
-  const appendMessage = (role: 'agent' | 'user', text: string, id?: string) => {
+  const appendMessage = (
+    role: 'agent' | 'user',
+    text: string,
+    id?: string,
+    meta?: Pick<Message, 'isAssessmentFeedback'>,
+  ) => {
     const msgId = id ?? `${role}-${Date.now()}`
     setMessages((prev) => {
       const exists = prev.find((m) => m.id === msgId)
-      if (exists) return prev.map((m) => (m.id === msgId ? { ...m, text } : m))
-      return [...prev, { id: msgId, role, text }]
+      if (exists) {
+        return prev.map((m) =>
+          m.id === msgId
+            ? { ...m, text, isAssessmentFeedback: m.isAssessmentFeedback || meta?.isAssessmentFeedback }
+            : m,
+        )
+      }
+      return [...prev, { id: msgId, role, text, ...meta }]
     })
     scrollToBottom()
   }
@@ -169,14 +332,35 @@ export default function Roleplay({ agentId, title = 'Roleplay Practice', subtitl
               setGreetingReceived(true)
               appendMessage('agent', message, 'agent-greeting')
             } else {
-              const msgId = `agent-${Date.now()}`
+              const isAssessmentFeedback = awaitingFeedbackRef.current
+              if (isAssessmentFeedback) awaitingFeedbackRef.current = false
+
+              let msgId: string
+              if (isAssessmentFeedback) {
+                if (!feedbackMsgIdRef.current) feedbackMsgIdRef.current = `agent-feedback-${Date.now()}`
+                msgId = feedbackMsgIdRef.current
+              } else {
+                feedbackMsgIdRef.current = null
+                msgId = `agent-${Date.now()}`
+              }
+
+              if (isAssessmentPromptMessage(message)) {
+                assessmentPromptPendingRef.current = true
+              }
+
               const detectedName = extractCharacterName(message)
               if (detectedName) setActiveCharacter(detectedName)
               if (isReadyToStartMessage(message)) {
                 setCharacterIntroMsgId((prev) => prev ?? msgId)
               }
-              appendMessage('agent', message, msgId)
+              appendMessage('agent', message, msgId, { isAssessmentFeedback })
             }
+          } else if (role === 'user' && message.trim()) {
+            if (assessmentPromptPendingRef.current) {
+              assessmentPromptPendingRef.current = false
+              awaitingFeedbackRef.current = true
+            }
+            appendMessage('user', message, `user-voice-${Date.now()}`)
           }
           scrollToBottom()
         },
@@ -234,12 +418,19 @@ export default function Roleplay({ agentId, title = 'Roleplay Practice', subtitl
     setIsMicMuted(true)
     setSessionEndReason(null)
     userEndedRef.current = false
+    assessmentPromptPendingRef.current = false
+    awaitingFeedbackRef.current = false
+    feedbackMsgIdRef.current = null
     setAppStatus('idle')
   }
 
   const sendMessage = () => {
     const text = composerValue.trim()
     if (!text || !convRef.current) return
+    if (assessmentPromptPendingRef.current) {
+      assessmentPromptPendingRef.current = false
+      awaitingFeedbackRef.current = true
+    }
     userMessageCountRef.current += 1
     appendMessage('user', text)
     setComposerValue('')
@@ -366,7 +557,11 @@ export default function Roleplay({ agentId, title = 'Roleplay Practice', subtitl
                     characterActive = true
                     return <CharacterCard key={msg.id} text={msg.text} name={activeCharacter} />
                   }
-                  const applyTheme = msg.role === 'agent' && characterActive && activeCharacter
+                  if (msg.isAssessmentFeedback && msg.role === 'agent') {
+                    return <FeedbackCard key={msg.id} text={msg.text} />
+                  }
+                  const applyTheme =
+                    msg.role === 'agent' && characterActive && activeCharacter && !msg.isAssessmentFeedback
                   return (
                     <div key={msg.id} className={`message ${msg.role}`}>
                       {msg.role === 'agent' && (
